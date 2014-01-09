@@ -6,7 +6,8 @@
                  [org.clojure/clojurescript "0.0-2127"]
                  [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
                  [prismatic/dommy "0.1.1"]
-                 [markdown-clj "0.9.39"]]
+                 [markdown-clj "0.9.39"]
+                 [com.cemerick/url "0.1.0"]]
 
   :plugins [[lein-cljsbuild "1.0.1"]]
 
