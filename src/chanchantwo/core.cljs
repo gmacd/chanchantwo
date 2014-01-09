@@ -1,27 +1,19 @@
 (ns chanchantwo.core
-  (:require-macros [cljs.core.async.macros :refer [go alt!]]
+  (:require-macros [cljs.core.async.macros :refer [go]]
                    [dommy.macros :refer [sel1 deftemplate]])
-  (:require [clojure.string :refer [split blank?]]
-        		[goog.events :as events]
+  (:require [clojure.string :as string :refer [split blank?]]
+            [cljs.core.async :as async :refer [chan <! close!]]
             [goog.net.XhrIo :as xhr]
-            [cljs.core.async :as async :refer [put! chan <! close!]]
-            [dommy.core :as dommy])
-  (:import [goog.net Jsonp]
-           [goog Uri]))
+            [dommy.core :as dommy]
+            [dommy.template :as template]
+            [markdown.core :as md]))
 
 (def blog-content-url "http://localhost:8000/blog.md")
 
-(defn elem [id] (.getElementById js/document id))
-
 (defn log [s] (.log js/console (str s)))
 
-(defn listen [el type]
-  (let [out (chan)]
-    (events/listen el type
-      (fn [e] (put! out e)))
-    out))
-
 (defn GET [url]
+  "HTTP GET - returns channel on which the response will be sent"
   (let [ch (chan 1)]
     (xhr/send url
               (fn [event]
@@ -31,23 +23,39 @@
     ch))
 
 (defn split-posts [src]
-  (let [sections (remove blank? (split src #"---"))]
-    (log (str "1) " (first sections)))
-    (log (str "2) " (second sections)))
-    sections))
+  "Split a string separated by '---'.  Also removes empty results."
+  (remove blank? (split src #"---")))
 
+(defn parse-metadata [metadata]
+  "Transform string of yaml-style metadata into a map of keyword to value"
+  (let [string-kvps (->> metadata
+                         (string/split-lines)
+                         (map #(string/split % #":" 2)))]
+    ;string-kvps))
+    (into {} (for [[k v] string-kvps :when (not (blank? v))]
+               [(keyword k) (string/trim v)]))))
+
+; Template for a post.  Returns Dom Object representing a single post.
 (deftemplate post-template [metadata content]
-  [:p content])
+  (let [md-post (-> content (md/mdToHtml) (template/html->nodes))]
+    [:section
+     [:h3 (:title metadata)]
+     [:p md-post]]))
 
 (defn transform-posts [post-data post-content]
-  (post-template post-data post-content))
+  (let [metadata (parse-metadata post-data)]
+  ;(let [metadata post-data]
+    (post-template metadata post-content)))
 
 (defn append-post! [post]
-  (dommy/append! (sel1 :#blogapp) post))
+  "Insert a post into the page"
+    (dommy/append! (sel1 :#blogapp) post))
 
+; Entry point
+; Request the blog contents, await the response and then present them.
 (go
-  (let [posts-elem (elem "blog-contents")
-        blog-src (<! (GET blog-content-url))
+  (let [blog-src (<! (GET blog-content-url))
         src-posts (split-posts blog-src)
-        posts (->> (partition 2 src-posts) (map #(transform-posts (first %) (second %))))]
+        posts (->> (partition 2 src-posts)
+                   (map #(transform-posts (first %) (second %))))]
     (doall (map #(append-post! %) posts))))
