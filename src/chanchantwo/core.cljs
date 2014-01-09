@@ -1,12 +1,15 @@
 (ns chanchantwo.core
-  (:require-macros [cljs.core.async.macros :refer [go alt!]])
-  (:require [goog.events :as events]
+  (:require-macros [cljs.core.async.macros :refer [go alt!]]
+                   [dommy.macros :refer [sel1 deftemplate]])
+  (:require [clojure.string :refer [split blank?]]
+        		[goog.events :as events]
             [goog.net.XhrIo :as xhr]
             [cljs.core.async :as async :refer [put! chan <! close!]]
-            [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true])
+            [dommy.core :as dommy])
   (:import [goog.net Jsonp]
            [goog Uri]))
+
+(def blog-content-url "http://localhost:8000/blog.md")
 
 (defn elem [id] (.getElementById js/document id))
 
@@ -27,10 +30,24 @@
                       (close! ch)))))
     ch))
 
-(defn widget [contents data]
-  (om/component
-    (dom/div nil contents)))
+(defn split-posts [src]
+  (let [sections (remove blank? (split src #"---"))]
+    (log (str "1) " (first sections)))
+    (log (str "2) " (second sections)))
+    sections))
+
+(deftemplate post-template [metadata content]
+  [:p content])
+
+(defn transform-posts [post-data post-content]
+  (post-template post-data post-content))
+
+(defn append-post! [post]
+  (dommy/append! (sel1 :#blogapp) post))
 
 (go
-  (let [blog (<! (GET "http://localhost:8000/blog.md"))]
-    (om/root {} (partial widget blog) (elem "blog-contents"))))
+  (let [posts-elem (elem "blog-contents")
+        blog-src (<! (GET blog-content-url))
+        src-posts (split-posts blog-src)
+        posts (->> (partition 2 src-posts) (map #(transform-posts (first %) (second %))))]
+    (doall (map #(append-post! %) posts))))
