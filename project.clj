@@ -24,7 +24,7 @@
              {:id "release"
               :source-paths ["src"]
               :compiler {
-                :output-to "chanchantwo.js"
+                :output-to "chanchantwo-release.js"
                 :optimizations :advanced
                 :pretty-print false
                 :closure-warnings

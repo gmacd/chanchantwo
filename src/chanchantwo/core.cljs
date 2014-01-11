@@ -55,23 +55,39 @@
                [(keyword k) (string/trim v)]))))
 
 
+; Template for a post title.  Returns Dom Object representing a
+; single post title.
+(deftemplate post-title-template [post]
+  (let [title ((post :metadata) :title)]
+    [:h3 title]))
+
+
 ; Template for a post.  Returns Dom Object representing a single post.
-(deftemplate post-template [metadata content]
-  (let [md-post (-> content (md/mdToHtml) (template/html->nodes))]
+(deftemplate post-template [post]
+  (let [title ((post :metadata) :title)
+        content (post :content)
+        md-post (-> content (md/mdToHtml) (template/html->nodes))]
     [:article
-     [:header [:h3 (:title metadata)]]
+     [:header [:h3 title]]
      [:p md-post]]))
 
 
-(defn transform-posts [post-data post-content]
-  (let [metadata (parse-metadata post-data)]
+;(defn transform-posts [post-data post-content]
+;  (let [metadata (parse-metadata post-data)]
   ;(let [metadata post-data]
-    (post-template metadata post-content)))
+;    (post-template metadata post-content)))
 
 
 (defn append-post! [post]
   "Insert a post into the page"
-  (dommy/append! (sel1 :#blogapp) post))
+  (dommy/append! (sel1 :#blogapp)
+                 (post-template post)))
+
+
+(defn append-post-title! [post]
+  "Insert a post title into the page"
+  (dommy/append! (sel1 :#blogapp)
+                 (post-title-template post)))
 
 
 (deftemplate page-title [metadata]
@@ -94,22 +110,26 @@
 
 
 (defn fetch-blog-contents []
-  "Request the blog contents, returning it on a channel"
+  "Request the blog contents, returning it on a channel.
+   Channel returns a seq of records with :metadata and :content"
   (let [ch (chan 1)]
-    (go (let [blog-contents (<! (GET blog-content-url))
-              src-posts (split-posts blog-contents)
-              posts (->> (partition 2 src-posts)
-                     (map #(transform-posts (first %) (second %))))]
-          (>! ch posts)
-          (close! ch)))
+    (go (let [blog-contents (<! (GET blog-content-url))]
+          (>! ch
+              (->> blog-contents
+                   (split-posts)
+                   (partition 2)
+                   (map #(hash-map :metadata (parse-metadata (first %))
+                                   :content (second %))))))
+          (close! ch))
     ch))
 
 
 (defn show-front-page []
+  "Grab the config and the blog content and display the titles"
   (go (let [config (<! (fetch-blog-config))]
         (apply-title! config)))
   (go (let [posts (<! (fetch-blog-contents))]
-        (doall (map #(append-post! %) posts)))))
+        (doall (map #(append-post-title! %) (reverse posts))))))
 
 ;(defn show-post [title-id]
 ;  (log (str "Showing post: " title-id)))
