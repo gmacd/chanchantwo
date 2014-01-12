@@ -7,7 +7,7 @@
             [dommy.core :as dommy]
             [dommy.template :as template]
             [markdown.core :as md]
-            [cemerick.url :refer (url-decode query->map)]))
+            [cemerick.url :refer (url-encode query->map)]))
 
 
 (def blog-config-url "/blog-config.yaml")
@@ -15,6 +15,27 @@
 
 
 (defn log [s] (.log js/console (str s)))
+
+
+(defn find-first [pred coll]
+  "Find first matching element in coll"
+  (first (filter pred coll)))
+
+
+(defn strip-pairs [s c]
+  "Strip pairs of char c from string s if the string starts ands ends in c.
+   Otherwise returns s."
+  (if (and (= (first s) c)
+           (= (last s) c))
+    (subs s 1 (dec (count s)))
+    s))
+
+
+(defn strip-last [s c]
+  "Strip last instance of char c from s, if it exists.  Otherwise returns s."
+  (if (= (last s) c)
+    (subs s 0 (dec (count s)))
+    s))
 
 
 (defn GET [url]
@@ -47,35 +68,34 @@
 
 
 (defn parse-metadata [metadata]
-  "Transform string of yaml-style metadata into a map of keyword to value"
+  "Transform string of yaml-style metadata into a map of keyword to value.
+   Also do some additional processing on the metadata."
   (let [string-kvps (->> metadata
                          (string/split-lines)
-                         (map #(string/split % #":" 2)))]
-    (into {} (for [[k v] string-kvps :when (not (blank? v))]
-               [(keyword k) (string/trim v)]))))
+                         (map #(string/split % #":" 2)))
+        metadata (into {}
+                       (for [[k v] string-kvps :when (not (blank? v))]
+                         [(keyword k)
+                          (-> v (string/trim) (strip-pairs \"))]))]
+    (assoc metadata :title-id (url-encode (:title metadata)))))
 
 
 ; Template for a post title.  Returns Dom Object representing a
 ; single post title.
 (deftemplate post-title-template [post]
-  (let [title ((post :metadata) :title)]
-    [:h3 title]))
+  (let [title (get-in post [:metadata :title])
+        safe-title (url-encode title)]
+    [:h3 [:a {:href (str "?post=" safe-title)} title]]))
 
 
 ; Template for a post.  Returns Dom Object representing a single post.
 (deftemplate post-template [post]
-  (let [title ((post :metadata) :title)
+  (let [title (get-in post [:metadata :title])
         content (post :content)
         md-post (-> content (md/mdToHtml) (template/html->nodes))]
     [:article
      [:header [:h3 title]]
      [:p md-post]]))
-
-
-;(defn transform-posts [post-data post-content]
-;  (let [metadata (parse-metadata post-data)]
-  ;(let [metadata post-data]
-;    (post-template metadata post-content)))
 
 
 (defn append-post! [post]
@@ -126,17 +146,27 @@
 
 (defn show-front-page []
   "Grab the config and the blog content and display the titles"
+  (log "show-front-page")
   (go (let [config (<! (fetch-blog-config))]
         (apply-title! config)))
   (go (let [posts (<! (fetch-blog-contents))]
         (doall (map #(append-post-title! %) (reverse posts))))))
 
-;(defn show-post [title-id]
-;  (log (str "Showing post: " title-id)))
+(defn show-post [title-id]
+  "Show a single post"
+  (log (str "show-post: " title-id))
+  (go (let [config (<! (fetch-blog-config))]
+        (apply-title! config)))
+  (go (let [posts (<! (fetch-blog-contents))
+            requested-post (find-first #(= (get-in % [:metadata :title]) title-id)
+                                       posts)]
+        (append-post! requested-post))))
 
-;(defn show-posts-for-tag [tag]
-;  (log (str "Showing posts for tag: " tag)))
 
+; Dispatch based on url parameters
+(def url (.-URL js/document))
+(def url-params (second (split-url url)))
 
-;(def url (.-URL js/document))
-(show-front-page)
+(cond
+ (contains? url-params :post) (show-post (strip-last (:post url-params) \/))
+ :else (show-front-page))

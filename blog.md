@@ -167,7 +167,7 @@ The code for this release can be found on [github](https://github.com/gmacd/chan
     (doseq [md-file md-files]
       (let [dest-path (str dest-path "/" (with-ext (.getName md-file) "html"))]
         (convert-md-file md-file dest-path)))))
-        
+
 (defn -main [& args]
   ; Bit of a hack to create the folder - better way?
   (jio/make-parents (str dest-posts-path "/x"))
@@ -314,7 +314,7 @@ While playing around with Dart, I implemented [Conway's Game of Life](http://en.
 I haven't put a live demo up yet, but you can [grab the source here.](https://github.com/gmacd/dartlife)
 ---
 layout: post
-title: "Switched to Octopress"
+title: "Switched to/ Octopress"
 date: 2013-11-17 00:29
 comments: true
 categories: [blog]
