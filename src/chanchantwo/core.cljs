@@ -112,7 +112,7 @@
 
 (deftemplate page-title [metadata]
   [:header
-   [:h1 (:title metadata)]])
+   [:h1 [:a {:href "/" :class "disguised"} (:title metadata)]]])
 
 (defn apply-title! [metadata]
   "Apply the blog title"
@@ -146,15 +146,14 @@
 
 (defn show-front-page []
   "Grab the config and the blog content and display the titles"
-  (log "show-front-page")
   (go (let [config (<! (fetch-blog-config))]
         (apply-title! config)))
   (go (let [posts (<! (fetch-blog-contents))]
         (doall (map #(append-post-title! %) (reverse posts))))))
 
+
 (defn show-post [title-id]
   "Show a single post"
-  (log (str "show-post: " title-id))
   (go (let [config (<! (fetch-blog-config))]
         (apply-title! config)))
   (go (let [posts (<! (fetch-blog-contents))

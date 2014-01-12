@@ -2,31 +2,24 @@
 
 ### Features
 
- - Title, sidebar, footer
+ - Better, exhaustive test blog
+ - Pure sidemenu style?
+ - Sidebar, footer
  - Date
- - Images
- - Use for gmacd blog
- - Tags in posts
- - All tags in sidebar
+ - Syntax highlighting
+ - Better single page style
  - Filters
- -- All posts
  -- Most recent posts
  -- Posts by page
  -- Posts with tag
- -- Single post
  -- Posts matching search
  - Comments (Disqus)
  - Basic styling
+ - RSS feed
 
 ### Bugs
-
- - Remove quotes from strings in metadata
 
 ### Maybes
 
  - Dynamically add more posts when scrolling
  - Add post?
- - Config file?
-
-## Done
-
