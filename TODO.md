@@ -16,6 +16,7 @@
  - Comments (Disqus)
  - Basic styling
  - RSS feed
+ - Analytics
 
 ### Bugs
 

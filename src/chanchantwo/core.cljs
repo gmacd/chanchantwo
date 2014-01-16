@@ -111,8 +111,7 @@
 
 
 (deftemplate page-title [metadata]
-  [:header
-   [:h1 [:a {:href "/" :class "disguised"} (:title metadata)]]])
+  [:h1 [:a {:href "/" :class "disguised"} (:title metadata)]])
 
 (defn apply-title! [metadata]
   "Apply the blog title"
